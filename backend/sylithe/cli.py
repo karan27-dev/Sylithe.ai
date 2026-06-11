@@ -72,11 +72,14 @@ def _ensure_api_key() -> None:
 def _build_runner(workspace: Path, auto_yes: bool, model: str | None,
                   max_iter: int | None = None) -> AgentRunner:
     CONFIG_DIR.mkdir(parents=True, exist_ok=True)
+    # Read ~/.sylithe/config.env so MAX_AGENT_ITERATIONS and other user
+    # preferences are respected; CLI flags override env file values.
+    env_file = str(CONFIG_FILE) if CONFIG_FILE.exists() else None
     settings = Settings(
         workspace_root=str(workspace),
         database_url=f"sqlite:///{CONFIG_DIR / 'sylithe.db'}",
         audit_log_path=str(CONFIG_DIR / "audit.log.jsonl"),
-        _env_file=None,
+        _env_file=env_file,
     )
     if model:
         settings.sylithe_model = model
