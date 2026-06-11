@@ -69,7 +69,8 @@ def _ensure_api_key() -> None:
     print(_c(_GREEN, "Saved.") + "\n")
 
 
-def _build_runner(workspace: Path, auto_yes: bool, model: str | None) -> AgentRunner:
+def _build_runner(workspace: Path, auto_yes: bool, model: str | None,
+                  max_iter: int | None = None) -> AgentRunner:
     CONFIG_DIR.mkdir(parents=True, exist_ok=True)
     settings = Settings(
         workspace_root=str(workspace),
@@ -79,6 +80,8 @@ def _build_runner(workspace: Path, auto_yes: bool, model: str | None) -> AgentRu
     )
     if model:
         settings.sylithe_model = model
+    if max_iter is not None:
+        settings.max_agent_iterations = max_iter
     memory = MemoryStore(settings.database_url)
 
     def on_event(kind: str, data: dict) -> None:
@@ -128,6 +131,8 @@ def main() -> None:
     parser.add_argument("--yes", "-y", action="store_true",
                         help="auto-approve destructive actions (use with care)")
     parser.add_argument("--model", help="override model (deepseek-chat / deepseek-reasoner)")
+    parser.add_argument("--max-iter", type=int, default=None,
+                        help="max agent iterations (default: 50)")
     parser.add_argument("--version", action="version", version=f"sylithe {__version__}")
     args = parser.parse_args()
 
@@ -136,7 +141,8 @@ def main() -> None:
 
     workspace = Path.cwd()
     repo = detect_repo(workspace)
-    runner = _build_runner(workspace, auto_yes=args.yes, model=args.model)
+    runner = _build_runner(workspace, auto_yes=args.yes, model=args.model,
+                           max_iter=args.max_iter)
 
     if args.task:
         _run_task(runner, " ".join(args.task), repo)

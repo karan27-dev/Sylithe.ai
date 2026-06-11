@@ -21,7 +21,7 @@ class Settings(BaseSettings):
     github_webhook_secret: str = ""
 
     # Agent loop
-    max_agent_iterations: int = 20
+    max_agent_iterations: int = 50
     request_timeout_seconds: float = 120.0
 
     # Workspace root the agent's skills are allowed to touch
