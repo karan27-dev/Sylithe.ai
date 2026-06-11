@@ -33,10 +33,31 @@ def _safe_path(workspace: Path, relative: str) -> Path:
     return candidate
 
 
+def _truncate(text: str, head: int = 2500, tail: int = 3500) -> str:
+    """Token-saving truncation: keep the start (context) and the end (where
+    errors usually are) instead of one giant blob."""
+    if len(text) <= head + tail:
+        return text
+    omitted = len(text) - head - tail
+    return f"{text[:head]}\n… [{omitted} chars omitted — request a narrower view if needed] …\n{text[-tail:]}"
+
+
 def _run(cmd: list[str], cwd: Path, timeout: int = 120) -> str:
     proc = subprocess.run(cmd, cwd=cwd, capture_output=True, text=True, timeout=timeout)
     out = (proc.stdout + proc.stderr).strip()
-    return f"exit={proc.returncode}\n{out[:20000]}"
+    return f"exit={proc.returncode}\n{_truncate(out)}"
+
+
+# DevOps toolchain the agent may drive directly. Binaries outside this list
+# are refused; destructive subcommands are gated by the policy engine.
+_ALLOWED_BINARIES = {
+    "docker", "docker-compose", "podman", "kubectl", "helm", "kustomize",
+    "terraform", "ansible", "ansible-playbook", "pulumi",
+    "npm", "npx", "yarn", "pnpm", "node",
+    "pip", "pip3", "python", "python3", "pytest", "ruff", "mypy",
+    "go", "cargo", "rustc", "make", "mvn", "gradle",
+    "gh", "glab", "curl", "jq", "grep", "find", "wc", "ls", "cat", "head", "tail",
+}
 
 
 def build_registry(settings: Settings, memory: MemoryStore) -> SkillRegistry:
@@ -57,6 +78,30 @@ def build_registry(settings: Settings, memory: MemoryStore) -> SkillRegistry:
         return _run(["git", *shlex.split(args)], cwd=workspace)
 
     @registry.register(
+        name="run_command",
+        description="Run a DevOps tool in the workspace: docker, kubectl, helm, terraform, ansible, npm, pytest, gh, etc. No shell operators (pipes/redirects). Destructive subcommands (delete, destroy, prune…) need operator confirmation.",
+        parameters={
+            "type": "object",
+            "properties": {"command": {"type": "string",
+                                       "description": "Full command, e.g. 'kubectl get pods -n prod'"}},
+            "required": ["command"],
+        },
+        risk=Risk.REVERSIBLE,
+    )
+    def run_command(command: str) -> str:
+        parts = shlex.split(command)
+        if not parts:
+            raise ValueError("Empty command")
+        binary = Path(parts[0]).name
+        if binary == "git":
+            raise PermissionError("Use the run_git skill for git operations.")
+        if binary not in _ALLOWED_BINARIES:
+            raise PermissionError(
+                f"'{binary}' is not in the allowed DevOps toolchain: "
+                f"{', '.join(sorted(_ALLOWED_BINARIES))}")
+        return _run(parts, cwd=workspace, timeout=300)
+
+    @registry.register(
         name="read_file",
         description="Read a file from the workspace (path relative to workspace root).",
         parameters={
@@ -66,7 +111,7 @@ def build_registry(settings: Settings, memory: MemoryStore) -> SkillRegistry:
         },
     )
     def read_file(path: str) -> str:
-        return _safe_path(workspace, path).read_text()[:50000]
+        return _truncate(_safe_path(workspace, path).read_text(), head=8000, tail=4000)
 
     @registry.register(
         name="list_dir",

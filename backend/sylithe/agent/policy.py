@@ -46,6 +46,11 @@ _FORBIDDEN_GIT = re.compile(
     r"(push\s+.*--force(?!-with-lease)|push\s+-f\b|reset\s+--hard\s+origin|clean\s+-[a-z]*f|branch\s+-D\s+(main|master)\b)"
 )
 
+# DevOps subcommands that remove/destroy resources — always need a human yes.
+_DESTRUCTIVE_CMD = re.compile(
+    r"\b(delete|destroy|prune|uninstall|drain|rmi|rm)\b|\bdown\b|terraform\s+apply"
+)
+
 
 def redact_secrets(text: str) -> str:
     for pattern in _SECRET_PATTERNS:
@@ -71,6 +76,16 @@ class PolicyEngine:
                     Verdict.DENY,
                     "History-destroying git operations are never permitted.",
                     rule="no-destructive-git",
+                )
+
+        # Rule: resource-destroying tool subcommands need a human yes.
+        if skill_name == "run_command":
+            cmd = str(args.get("command", ""))
+            if _DESTRUCTIVE_CMD.search(cmd) and skill_name not in self.confirmed_actions:
+                return PolicyDecision(
+                    Verdict.REQUIRE_CONFIRMATION,
+                    "This command can remove or destroy resources; operator confirmation needed.",
+                    rule="confirm-destructive-cmd",
                 )
 
         # Rule: never merge to a protected branch without passing tests.

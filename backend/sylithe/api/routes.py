@@ -172,17 +172,30 @@ def run_events(run_id: int, request: Request) -> list[dict]:
 
 @router.get("/api/integrations")
 def integrations(request: Request) -> list[dict]:
+    """Local toolchain is auto-detected: if the binary is on this machine, the
+    agent can drive it via run_command using the user's own credentials."""
+    import shutil
     state = _state(request)
+
+    def tool(name: str, binary: str, kind: str) -> dict:
+        return {"name": name, "kind": kind,
+                "status": "connected" if shutil.which(binary) else "not installed"}
+
     return [
-        {"name": "DeepSeek", "kind": "llm",
+        {"name": "Sylithe agent", "kind": "llm",
          "status": "connected" if state.settings.deepseek_api_key else "setup needed"},
-        {"name": "GitHub", "kind": "source",
-         "status": "connected" if state.settings.github_webhook_secret else "setup needed"},
         {"name": "Git (local)", "kind": "source",
          "status": "connected" if state.repo().is_git else "no repo"},
-        {"name": "GitLab", "kind": "source", "status": "soon"},
-        {"name": "Docker", "kind": "containers", "status": "soon"},
-        {"name": "Kubernetes", "kind": "orchestration", "status": "soon"},
+        {"name": "GitHub webhooks", "kind": "source",
+         "status": "connected" if state.settings.github_webhook_secret else "setup needed"},
+        tool("GitHub CLI (gh)", "gh", "source"),
+        tool("Docker", "docker", "containers"),
+        tool("Kubernetes (kubectl)", "kubectl", "orchestration"),
+        tool("Helm", "helm", "orchestration"),
+        tool("Terraform", "terraform", "iac"),
+        tool("Ansible", "ansible", "iac"),
+        tool("Node / npm", "npm", "build"),
+        tool("Python / pytest", "pytest", "build"),
         {"name": "Prometheus", "kind": "observability", "status": "soon"},
         {"name": "Grafana", "kind": "observability", "status": "soon"},
         {"name": "Sentry", "kind": "errors", "status": "soon"},

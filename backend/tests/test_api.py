@@ -60,11 +60,15 @@ def test_fs_browse_restricted_to_home(make_state):
 
 def test_integrations_listed(make_state):
     client, _ = _client(make_state)
-    items = res = client.get("/api/integrations").json()
+    items = client.get("/api/integrations").json()
     names = {i["name"] for i in items}
-    assert {"DeepSeek", "GitHub", "Kubernetes"} <= names
-    deepseek = next(i for i in items if i["name"] == "DeepSeek")
-    assert deepseek["status"] == "connected"  # test settings set a key
+    assert {"Sylithe agent", "Docker", "Kubernetes (kubectl)", "Terraform"} <= names
+    core = next(i for i in items if i["name"] == "Sylithe agent")
+    assert core["status"] == "connected"  # test settings set a key
+    # local toolchain detection: every tool is either usable or honestly absent
+    for item in items:
+        assert item["status"] in ("connected", "not installed", "setup needed",
+                                  "no repo", "soon")
 
 
 def test_incident_dispatches_agent(make_state):

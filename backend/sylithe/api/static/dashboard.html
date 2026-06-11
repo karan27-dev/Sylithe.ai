@@ -3,195 +3,202 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Sylithe — Agent Console</title>
+<title>Sylithe</title>
 <style>
   :root {
-    --bg: #0a0a0c; --panel: #111114; --panel2: #16161a; --border: #232328;
-    --text: #ededf0; --muted: #8a8a94; --dim: #5a5a64;
-    --accent: #7c7ff2; --accent-soft: rgba(124,127,242,.12);
+    --bg: #0b0b0d; --panel: #111113; --raise: #18181b; --raise2: #202024;
+    --border: #26262b; --text: #ececef; --muted: #9a9aa3; --dim: #5d5d66;
+    --accent: #7c7ff2; --accent-soft: rgba(124,127,242,.13);
     --green: #4ade80; --red: #f87171; --amber: #fbbf24;
-    --radius: 12px; --radius-sm: 8px;
+    --r: 12px; --r-lg: 18px;
     --mono: ui-monospace, "SF Mono", Menlo, monospace;
   }
   * { box-sizing: border-box; }
   body { margin: 0; background: var(--bg); color: var(--text);
-         font: 14px/1.55 -apple-system, "Inter", "Segoe UI", sans-serif;
+         font: 14.5px/1.6 -apple-system, "Inter", "Segoe UI", sans-serif;
          display: flex; height: 100vh; overflow: hidden; }
-  ::-webkit-scrollbar { width: 8px; height: 8px; }
+  ::-webkit-scrollbar { width: 8px; }
   ::-webkit-scrollbar-thumb { background: #2a2a30; border-radius: 4px; }
+  button { font: inherit; cursor: pointer; border: none; background: none; color: inherit; }
 
   /* ── sidebar ── */
-  aside { width: 232px; min-width: 232px; background: var(--panel);
+  aside { width: 250px; min-width: 250px; background: var(--panel);
           border-right: 1px solid var(--border); display: flex;
-          flex-direction: column; padding: 18px 12px; gap: 4px; }
-  .logo { font-weight: 700; letter-spacing: .14em; font-size: 15px;
-          padding: 4px 10px 16px; display: flex; align-items: center; gap: 8px; }
-  .logo .dot { width: 9px; height: 9px; border-radius: 50%; background: var(--accent);
-               box-shadow: 0 0 10px var(--accent); }
-  .nav-label { font-size: 11px; text-transform: uppercase; letter-spacing: .1em;
-               color: var(--dim); padding: 14px 10px 6px; }
-  .nav-item { display: flex; align-items: center; gap: 9px; padding: 7px 10px;
-              border-radius: var(--radius-sm); color: var(--muted); cursor: pointer;
-              user-select: none; }
-  .nav-item:hover { background: var(--panel2); color: var(--text); }
-  .nav-item.active { background: var(--accent-soft); color: var(--accent); }
-  .nav-item svg { width: 15px; height: 15px; flex: none; }
-  .integration { display: flex; align-items: center; gap: 8px; padding: 5px 10px;
-                 color: var(--muted); font-size: 12.5px; }
+          flex-direction: column; padding: 14px 10px; }
+  .logo { display: flex; align-items: center; gap: 9px; font-weight: 700;
+          letter-spacing: .12em; font-size: 14px; padding: 4px 10px 14px; }
+  .logo .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--accent);
+               box-shadow: 0 0 9px var(--accent); }
+  .new-chat { display: flex; align-items: center; gap: 9px; margin: 0 4px 12px;
+              padding: 9px 13px; border: 1px solid var(--border); border-radius: var(--r);
+              color: var(--text); background: var(--raise); }
+  .new-chat:hover { border-color: var(--accent); }
+  .side-label { font-size: 11px; text-transform: uppercase; letter-spacing: .1em;
+                color: var(--dim); padding: 8px 12px 6px; }
+  .chats { flex: 1; overflow-y: auto; }
+  .chat-item { padding: 7px 12px; border-radius: 9px; color: var(--muted);
+               cursor: pointer; overflow: hidden; text-overflow: ellipsis;
+               white-space: nowrap; font-size: 13.5px; }
+  .chat-item:hover { background: var(--raise); color: var(--text); }
+  .side-foot { border-top: 1px solid var(--border); padding: 10px 12px 2px;
+               font-size: 12px; color: var(--dim); display: flex; gap: 7px;
+               align-items: center; }
   .st { width: 7px; height: 7px; border-radius: 50%; flex: none; }
-  .st.connected { background: var(--green); }
-  .st.setup { background: var(--amber); }
-  .st.soon { background: var(--dim); }
-  .integrations-wrap { overflow-y: auto; flex: 1; }
+  .st.ok { background: var(--green); } .st.bad { background: var(--red); }
+  .st.warn { background: var(--amber); } .st.off { background: var(--dim); }
 
   /* ── main ── */
-  main { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
-  header { display: flex; align-items: center; gap: 12px; padding: 14px 22px;
-           border-bottom: 1px solid var(--border); background: var(--panel); }
-  .repo-chip { display: flex; align-items: center; gap: 9px; background: var(--panel2);
-               border: 1px solid var(--border); border-radius: var(--radius-sm);
-               padding: 7px 12px; font-family: var(--mono); font-size: 12.5px; }
-  .branch { color: var(--accent); }
-  .dirty { color: var(--amber); }
-  .spacer { flex: 1; }
-  button { background: var(--panel2); color: var(--text); border: 1px solid var(--border);
-           border-radius: var(--radius-sm); padding: 7px 14px; font: inherit;
-           font-size: 13px; cursor: pointer; }
-  button:hover { border-color: var(--accent); }
-  button.primary { background: var(--accent); border-color: var(--accent); color: #0a0a0c;
-                   font-weight: 600; }
-  button.ghost-green { color: var(--green); border-color: rgba(74,222,128,.35); background: transparent; }
-  button.ghost-red { color: var(--red); border-color: rgba(248,113,113,.35); background: transparent; }
-  button:disabled { opacity: .45; cursor: default; }
-  .watch-btn.on { background: rgba(74,222,128,.12); border-color: rgba(74,222,128,.4);
-                  color: var(--green); }
+  main { flex: 1; display: flex; flex-direction: column; overflow: hidden;
+         align-items: center; }
+  .topbar { width: 100%; display: flex; justify-content: center; padding: 12px 20px 8px; }
+  .repo-chip { display: flex; align-items: center; gap: 8px; font-family: var(--mono);
+               font-size: 12px; color: var(--muted); background: var(--panel);
+               border: 1px solid var(--border); border-radius: 20px; padding: 5px 14px; }
+  .repo-chip b { color: var(--text); font-weight: 600; }
+  .branch { color: var(--accent); } .dirty { color: var(--amber); }
 
-  .content { flex: 1; overflow-y: auto; padding: 22px; display: grid;
-             grid-template-columns: minmax(0, 1.25fr) minmax(0, 1fr); gap: 18px;
-             align-content: start; }
-  .full { grid-column: 1 / -1; }
-  .card { background: var(--panel); border: 1px solid var(--border);
-          border-radius: var(--radius); padding: 16px 18px; }
-  .card h2 { margin: 0 0 12px; font-size: 13px; font-weight: 600; color: var(--muted);
-             text-transform: uppercase; letter-spacing: .08em;
-             display: flex; align-items: center; gap: 8px; }
-  .badge { background: var(--accent-soft); color: var(--accent); border-radius: 20px;
-           padding: 1px 9px; font-size: 11.5px; font-weight: 600; }
-
-  textarea { width: 100%; min-height: 76px; background: var(--bg); color: var(--text);
-             border: 1px solid var(--border); border-radius: var(--radius-sm);
-             padding: 11px 13px; font: inherit; resize: vertical; }
-  textarea:focus { outline: none; border-color: var(--accent); }
-  .composer-row { display: flex; gap: 10px; margin-top: 10px; align-items: center; }
-  .hint { color: var(--dim); font-size: 12px; }
-
-  .run { border: 1px solid var(--border); border-radius: var(--radius-sm);
-         padding: 11px 13px; margin-bottom: 9px; background: var(--panel2); }
-  .run-head { display: flex; gap: 10px; align-items: baseline; cursor: pointer; }
-  .pill { font-size: 11px; font-weight: 700; border-radius: 20px; padding: 1px 9px;
-          flex: none; text-transform: uppercase; letter-spacing: .04em; }
+  .thread { flex: 1; width: 100%; max-width: 820px; overflow-y: auto;
+            padding: 12px 24px 24px; }
+  .msg { margin: 18px 0; display: flex; flex-direction: column; }
+  .msg.user { align-items: flex-end; }
+  .bubble-user { background: var(--raise2); border-radius: var(--r-lg);
+                 border-bottom-right-radius: 6px; padding: 11px 16px;
+                 max-width: 78%; white-space: pre-wrap; }
+  .bubble-agent { max-width: 100%; }
+  .agent-name { font-size: 12px; color: var(--dim); margin-bottom: 5px;
+                display: flex; gap: 8px; align-items: center; }
+  .pill { font-size: 10.5px; font-weight: 700; border-radius: 20px; padding: 0 8px;
+          text-transform: uppercase; letter-spacing: .04em; }
   .pill.completed { background: rgba(74,222,128,.12); color: var(--green); }
   .pill.running { background: rgba(251,191,36,.12); color: var(--amber); }
   .pill.error, .pill.max_iterations { background: rgba(248,113,113,.12); color: var(--red); }
   .pill.needs_confirmation { background: var(--accent-soft); color: var(--accent); }
-  .run-task { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis;
-              white-space: nowrap; }
-  .run-meta { color: var(--dim); font-size: 12px; flex: none; }
-  .run-body { display: none; margin-top: 10px; border-top: 1px solid var(--border);
-              padding-top: 10px; }
-  .run.open .run-body { display: block; }
-  .run-summary { white-space: pre-wrap; color: var(--muted); font-size: 13px;
-                 max-height: 260px; overflow-y: auto; }
+  .agent-text { white-space: pre-wrap; color: var(--text); }
+  .activity-toggle { font-size: 12px; color: var(--dim); margin-top: 7px; }
+  .activity-toggle:hover { color: var(--accent); }
+  .events { margin-top: 6px; border-left: 2px solid var(--border); padding-left: 12px; }
   .event { font-family: var(--mono); font-size: 12px; color: var(--muted);
-           padding: 2px 0; display: flex; gap: 8px; }
+           padding: 1.5px 0; }
   .event .ok { color: var(--green); } .event .fail { color: var(--red); }
 
-  .proposal { border: 1px solid var(--border); border-radius: var(--radius-sm);
-              margin-bottom: 12px; background: var(--panel2); overflow: hidden; }
-  .proposal-head { padding: 11px 13px; }
+  .proposal { border: 1px solid var(--border); border-radius: var(--r);
+              margin-top: 12px; background: var(--panel); overflow: hidden; }
+  .proposal-head { padding: 11px 14px; }
   .proposal-file { font-family: var(--mono); font-size: 12.5px; color: var(--accent); }
-  .proposal-desc { color: var(--muted); font-size: 13px; margin-top: 4px; }
-  .diff { font-family: var(--mono); font-size: 12px; max-height: 320px;
+  .proposal-desc { color: var(--muted); font-size: 13px; margin-top: 3px; }
+  .diff { font-family: var(--mono); font-size: 12px; max-height: 300px;
           overflow: auto; border-top: 1px solid var(--border); background: var(--bg); }
   .dl { padding: 1px 12px; white-space: pre-wrap; word-break: break-all; }
   .dl.add { background: rgba(74,222,128,.09); color: #b5f5cf; }
-  .dl.del { background: rgba(248,113,113,.09); color: #fac7c7; text-decoration: line-through;
-            text-decoration-color: rgba(248,113,113,.5); }
+  .dl.del { background: rgba(248,113,113,.09); color: #fac7c7; }
   .dl.ctx { color: var(--dim); }
-  .proposal-actions { display: flex; gap: 10px; padding: 11px 13px;
-                      border-top: 1px solid var(--border); align-items: center; }
-  .empty { color: var(--dim); text-align: center; padding: 26px 0; font-size: 13px; }
+  .proposal-actions { display: flex; gap: 10px; padding: 10px 14px;
+                      border-top: 1px solid var(--border); }
+  .btn-yes { color: var(--green); border: 1px solid rgba(74,222,128,.35);
+             border-radius: 9px; padding: 6px 14px; }
+  .btn-no { color: var(--red); border: 1px solid rgba(248,113,113,.35);
+            border-radius: 9px; padding: 6px 14px; }
+  .btn-yes:hover { background: rgba(74,222,128,.1); }
+  .btn-no:hover { background: rgba(248,113,113,.1); }
 
-  /* ── modal ── */
+  .empty-thread { text-align: center; color: var(--dim); margin-top: 18vh; }
+  .empty-thread h1 { font-size: 22px; font-weight: 600; color: var(--text); margin: 0 0 6px; }
+
+  /* ── composer ── */
+  .composer-wrap { width: 100%; max-width: 820px; padding: 6px 24px 18px; position: relative; }
+  .composer { background: var(--raise); border: 1px solid var(--border);
+              border-radius: 22px; padding: 14px 16px 10px; }
+  .composer:focus-within { border-color: #3a3a44; }
+  .composer textarea { width: 100%; background: none; border: none; color: var(--text);
+                       font: inherit; resize: none; outline: none; max-height: 180px;
+                       min-height: 24px; }
+  .composer-row { display: flex; align-items: center; gap: 10px; margin-top: 8px; }
+  .plus-btn { width: 36px; height: 36px; border-radius: 11px; background: var(--raise2);
+              display: flex; align-items: center; justify-content: center;
+              font-size: 20px; color: var(--muted); }
+  .plus-btn:hover { color: var(--text); background: #26262c; }
+  .model-chip { margin-left: auto; color: var(--dim); font-size: 13px;
+                display: flex; align-items: center; gap: 8px; }
+  .send-btn { width: 36px; height: 36px; border-radius: 50%; background: var(--accent);
+              color: #0b0b0d; display: flex; align-items: center;
+              justify-content: center; font-weight: 700; }
+  .send-btn:disabled { opacity: .35; }
+
+  /* ── plus menu ── */
+  .menu { position: absolute; bottom: 76px; left: 24px; width: 300px;
+          background: #1b1b1f; border: 1px solid var(--border); border-radius: 16px;
+          padding: 7px; display: none; box-shadow: 0 18px 50px rgba(0,0,0,.5);
+          z-index: 10; max-height: 60vh; overflow-y: auto; }
+  .menu.show { display: block; }
+  .menu-item { display: flex; align-items: center; gap: 12px; padding: 10px 12px;
+               border-radius: 10px; cursor: pointer; color: var(--text); font-size: 14px; }
+  .menu-item:hover { background: var(--raise2); }
+  .menu-item .ic { width: 18px; text-align: center; color: var(--muted); flex: none; }
+  .menu-item .chev { margin-left: auto; color: var(--dim); }
+  .menu-item .check { margin-left: auto; color: var(--accent); }
+  .menu-sep { height: 1px; background: var(--border); margin: 6px 10px; }
+  .menu-head { display: flex; align-items: center; gap: 8px; padding: 8px 12px 4px;
+               color: var(--muted); font-size: 13px; cursor: pointer; }
+  .menu-head:hover { color: var(--text); }
+  .conn-status { margin-left: auto; font-size: 11px; color: var(--dim); }
+
+  /* ── folder modal ── */
   .modal-bg { position: fixed; inset: 0; background: rgba(0,0,0,.6); display: none;
-              align-items: center; justify-content: center; z-index: 10; }
+              align-items: center; justify-content: center; z-index: 20; }
   .modal-bg.show { display: flex; }
   .modal { width: 520px; max-height: 70vh; background: var(--panel);
-           border: 1px solid var(--border); border-radius: var(--radius);
+           border: 1px solid var(--border); border-radius: var(--r-lg);
            display: flex; flex-direction: column; }
-  .modal h3 { margin: 0; padding: 16px 18px 10px; font-size: 15px; }
+  .modal h3 { margin: 0; padding: 16px 18px 8px; font-size: 15px; }
   .modal .path { font-family: var(--mono); font-size: 12px; color: var(--muted);
                  padding: 0 18px 10px; word-break: break-all; }
   .dir-list { flex: 1; overflow-y: auto; border-top: 1px solid var(--border);
-              padding: 6px 0; min-height: 200px; }
-  .dir { padding: 7px 18px; cursor: pointer; display: flex; gap: 9px; align-items: center; }
-  .dir:hover { background: var(--panel2); }
-  .modal-actions { display: flex; gap: 10px; padding: 13px 18px;
+              padding: 6px 0; min-height: 220px; }
+  .dir { padding: 7px 18px; cursor: pointer; }
+  .dir:hover { background: var(--raise); }
+  .modal-actions { display: flex; gap: 10px; padding: 13px 18px; align-items: center;
                    border-top: 1px solid var(--border); justify-content: flex-end; }
   .git-tag { font-size: 11px; color: var(--green); border: 1px solid rgba(74,222,128,.35);
-             border-radius: 20px; padding: 0 8px; }
-  .toast { position: fixed; bottom: 22px; right: 22px; background: var(--panel2);
+             border-radius: 20px; padding: 0 8px; margin-right: auto; }
+  .mbtn { border: 1px solid var(--border); border-radius: 10px; padding: 7px 14px; }
+  .mbtn.primary { background: var(--accent); border-color: var(--accent);
+                  color: #0b0b0d; font-weight: 600; }
+  .toast { position: fixed; bottom: 20px; right: 20px; background: var(--raise2);
            border: 1px solid var(--border); border-left: 3px solid var(--accent);
-           border-radius: var(--radius-sm); padding: 11px 16px; font-size: 13px;
-           display: none; z-index: 20; max-width: 380px; }
+           border-radius: 10px; padding: 10px 16px; font-size: 13px; display: none;
+           z-index: 30; max-width: 360px; }
 </style>
 </head>
 <body>
 
 <aside>
   <div class="logo"><span class="dot"></span> SYLITHE</div>
-  <div class="nav-item active" onclick="scrollToEl('composer')">
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12h4l3 8 4-16 3 8h4"/></svg>
-    Agent console</div>
-  <div class="nav-item" onclick="scrollToEl('runs-card')">
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 3"/></svg>
-    Runs</div>
-  <div class="nav-item" onclick="scrollToEl('proposals-card')">
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 12l2 2 4-5"/><rect x="3" y="4" width="18" height="16" rx="2"/></svg>
-    Proposals <span class="badge" id="prop-count" style="display:none">0</span></div>
-  <div class="nav-label">Connectivity</div>
-  <div class="integrations-wrap" id="integrations"></div>
-  <div class="integration" style="border-top:1px solid var(--border); padding-top:10px;">
-    <span class="st" id="health-dot"></span><span id="health-text">checking…</span>
-  </div>
+  <button class="new-chat" onclick="newChat()">＋&nbsp; New task</button>
+  <div class="side-label">Recent</div>
+  <div class="chats" id="chats"></div>
+  <div class="side-foot"><span class="st off" id="health-dot"></span><span id="health-text">connecting…</span></div>
 </aside>
 
 <main>
-  <header>
-    <div class="repo-chip" id="repo-chip">loading workspace…</div>
-    <div class="spacer"></div>
-    <button class="watch-btn" id="watch-btn" onclick="toggleWatch()">⏵ Watch git: off</button>
-    <button class="primary" onclick="openFolderModal()">Open folder</button>
-  </header>
+  <div class="topbar"><div class="repo-chip" id="repo-chip">loading…</div></div>
 
-  <div class="content">
-    <div class="card full" id="composer">
-      <h2>New task</h2>
-      <textarea id="task" placeholder="e.g. Review the latest commit, run the tests, and propose fixes for anything broken…"></textarea>
+  <div class="thread" id="thread">
+    <div class="empty-thread" id="empty">
+      <h1>What should the agent work on?</h1>
+      <div>Open a project folder from the ＋ menu, then describe a task —<br>
+      review a commit, fix failing tests, resolve conflicts. Code changes come back as y/n proposals.</div>
+    </div>
+  </div>
+
+  <div class="composer-wrap">
+    <div class="menu" id="menu"></div>
+    <div class="composer">
+      <textarea id="task" rows="1" placeholder="Describe a task for Sylithe…"></textarea>
       <div class="composer-row">
-        <button class="primary" id="run-btn" onclick="runTask()">Run agent</button>
-        <span class="hint">The agent never edits code without your y/n — changes arrive as proposals.</span>
+        <button class="plus-btn" onclick="toggleMenu(event)">＋</button>
+        <span class="model-chip" id="model-chip"></span>
+        <button class="send-btn" id="send-btn" onclick="runTask()" aria-label="Send">↑</button>
       </div>
-    </div>
-
-    <div class="card" id="runs-card">
-      <h2>Agent runs</h2>
-      <div id="runs"><div class="empty">No runs yet</div></div>
-    </div>
-
-    <div class="card" id="proposals-card">
-      <h2>Proposed changes <span class="badge" id="prop-count2" style="display:none">0</span></h2>
-      <div id="proposals"><div class="empty">No pending proposals</div></div>
     </div>
   </div>
 </main>
@@ -203,9 +210,8 @@
     <div class="dir-list" id="dir-list"></div>
     <div class="modal-actions">
       <span class="git-tag" id="modal-git" style="display:none">git repo</span>
-      <div class="spacer"></div>
-      <button onclick="closeFolderModal()">Cancel</button>
-      <button class="primary" onclick="openHere()">Open this folder</button>
+      <button class="mbtn" onclick="closeFolderModal()">Cancel</button>
+      <button class="mbtn primary" onclick="openHere()">Open this folder</button>
     </div>
   </div>
 </div>
@@ -213,8 +219,8 @@
 <div class="toast" id="toast"></div>
 
 <script>
-let modalPath = null;
-const openRuns = new Set();
+let modalPath = null, watchOn = false, integrationsCache = [], skillsCache = [];
+const openEvents = new Set();
 
 function esc(s) { const d = document.createElement('div'); d.textContent = s ?? ''; return d.innerHTML; }
 function toast(msg) {
@@ -222,115 +228,194 @@ function toast(msg) {
   t.textContent = msg; t.style.display = 'block';
   clearTimeout(t._h); t._h = setTimeout(() => t.style.display = 'none', 4000);
 }
-function scrollToEl(id) { document.getElementById(id).scrollIntoView({behavior: 'smooth'}); }
+
+/* ── plus menu ── */
+function toggleMenu(e) {
+  e.stopPropagation();
+  const m = document.getElementById('menu');
+  if (m.classList.contains('show')) { m.classList.remove('show'); return; }
+  renderMenuRoot(); m.classList.add('show');
+}
+document.addEventListener('click', e => {
+  const m = document.getElementById('menu');
+  if (m.classList.contains('show') && !m.contains(e.target)) m.classList.remove('show');
+});
+
+function renderMenuRoot() {
+  document.getElementById('menu').innerHTML = `
+    <div class="menu-item" onclick="openFolderModal()"><span class="ic">📁</span> Open folder…</div>
+    <div class="menu-item" onclick="toggleWatch(event)"><span class="ic">👁</span> Watch git
+      ${watchOn ? '<span class="check">✓</span>' : '<span class="chev"></span>'}</div>
+    <div class="menu-sep"></div>
+    <div class="menu-item" onclick="renderMenuSkills(event)"><span class="ic">⚡</span> Skills <span class="chev">›</span></div>
+    <div class="menu-item" onclick="renderMenuConnectors(event)"><span class="ic">🔌</span> Connectors <span class="chev">›</span></div>
+    <div class="menu-sep"></div>
+    <div class="menu-item" onclick="insertTemplate('Review the latest commit, run the tests, and propose fixes for anything broken.')"><span class="ic">🔎</span> Review last commit</div>
+    <div class="menu-item" onclick="insertTemplate('Scan the workspace for merge conflicts, resolve what is safe, run tests, and summarize.')"><span class="ic">⇄</span> Resolve conflicts</div>
+    <div class="menu-item" onclick="insertTemplate('Run the test suite and explain any failures with the exact root cause.')"><span class="ic">🧪</span> Run tests</div>`;
+}
+
+function renderMenuConnectors(e) {
+  e.stopPropagation();
+  document.getElementById('menu').innerHTML =
+    `<div class="menu-head" onclick="renderMenuRoot()">‹ Connectors</div><div class="menu-sep"></div>` +
+    integrationsCache.map(i => `
+      <div class="menu-item">
+        <span class="st ${i.status === 'connected' ? 'ok' : i.status === 'soon' ? 'off' : 'warn'}"></span>
+        ${esc(i.name)} <span class="conn-status">${esc(i.status)}</span>
+      </div>`).join('');
+}
+
+function renderMenuSkills(e) {
+  e.stopPropagation();
+  document.getElementById('menu').innerHTML =
+    `<div class="menu-head" onclick="renderMenuRoot()">‹ Agent skills</div><div class="menu-sep"></div>` +
+    skillsCache.map(s => `<div class="menu-item"><span class="ic">·</span>
+      <span style="font-family:var(--mono);font-size:13px">${esc(s)}</span></div>`).join('');
+}
+
+function insertTemplate(text) {
+  document.getElementById('menu').classList.remove('show');
+  const ta = document.getElementById('task');
+  ta.value = text; ta.focus(); autosize();
+}
+
+async function toggleWatch(e) {
+  e.stopPropagation();
+  watchOn = !watchOn;
+  await fetch('/api/watch', {method: 'POST', headers: {'Content-Type': 'application/json'},
+                             body: JSON.stringify({enabled: watchOn})});
+  toast(watchOn ? 'Watch on — new commits trigger the agent automatically.' : 'Watch off.');
+  renderMenuRoot(); refreshWorkspace();
+}
 
 /* ── workspace ── */
 async function refreshWorkspace() {
   const w = await (await fetch('/api/workspace')).json();
+  watchOn = w.watch_enabled;
   const r = w.repo;
   let html;
   if (r.is_git) {
-    html = `<strong>${esc(r.name)}</strong> <span class="branch">⎇ ${esc(r.branch)}</span>`;
-    if (r.dirty) html += ` <span class="dirty">●</span>`;
-    if (r.ahead) html += ` <span class="dirty">↑${r.ahead}</span>`;
-    if (r.behind) html += ` <span style="color:var(--red)">↓${r.behind}</span>`;
-    html += ` <span style="color:var(--dim)">${esc(r.last_commit.slice(0, 46))}</span>`;
+    html = `<b>${esc(r.name)}</b> <span class="branch">⎇ ${esc(r.branch)}</span>`;
+    if (r.dirty) html += `<span class="dirty">●</span>`;
+    if (r.ahead) html += `<span class="dirty">↑${r.ahead}</span>`;
+    if (r.behind) html += `<span style="color:var(--red)">↓${r.behind}</span>`;
   } else {
-    html = `${esc(w.path)} <span style="color:var(--amber)">(not a git repo)</span>`;
+    html = `${esc(w.path)} <span style="color:var(--amber)">no git</span>`;
   }
+  if (watchOn) html += `<span style="color:var(--green)">👁 watching</span>`;
   document.getElementById('repo-chip').innerHTML = html;
-  const wb = document.getElementById('watch-btn');
-  wb.className = 'watch-btn' + (w.watch_enabled ? ' on' : '');
-  wb.textContent = w.watch_enabled ? '⏸ Watch git: on' : '⏵ Watch git: off';
-  wb.dataset.on = w.watch_enabled ? '1' : '';
-}
-
-async function toggleWatch() {
-  const on = !document.getElementById('watch-btn').dataset.on;
-  await fetch('/api/watch', {method: 'POST', headers: {'Content-Type': 'application/json'},
-                             body: JSON.stringify({enabled: on})});
-  toast(on ? 'Git watch enabled — new commits trigger the agent automatically.'
-           : 'Git watch disabled.');
-  refreshWorkspace();
 }
 
 /* ── folder picker ── */
 async function browse(path) {
   const res = await fetch('/api/fs?path=' + encodeURIComponent(path || '~'));
-  if (!res.ok) { toast((await res.json()).detail || 'Cannot open folder'); return; }
+  if (!res.ok) { toast((await res.json()).detail || 'Cannot open'); return; }
   const data = await res.json();
   modalPath = data.path;
   document.getElementById('modal-path').textContent = data.path;
   document.getElementById('modal-git').style.display = data.is_git ? '' : 'none';
-  const list = document.getElementById('dir-list');
   let html = '';
   if (data.parent) html += `<div class="dir" onclick="browse('${esc(data.parent).replace(/'/g, "\\'")}')">↩ ..</div>`;
   for (const d of data.dirs) {
     const full = data.path.replace(/\/$/, '') + '/' + d;
     html += `<div class="dir" onclick="browse('${esc(full).replace(/'/g, "\\'")}')">📁 ${esc(d)}</div>`;
   }
-  list.innerHTML = html || '<div class="empty">No subfolders</div>';
+  document.getElementById('dir-list').innerHTML = html || '<div class="dir" style="color:var(--dim)">No subfolders</div>';
 }
-function openFolderModal() { document.getElementById('modal-bg').classList.add('show'); browse('~'); }
+function openFolderModal() {
+  document.getElementById('menu').classList.remove('show');
+  document.getElementById('modal-bg').classList.add('show'); browse('~');
+}
 function closeFolderModal() { document.getElementById('modal-bg').classList.remove('show'); }
 async function openHere() {
   const res = await fetch('/api/workspace', {method: 'POST',
     headers: {'Content-Type': 'application/json'}, body: JSON.stringify({path: modalPath})});
   if (res.ok) { closeFolderModal(); toast('Workspace: ' + modalPath); refreshAll(); }
-  else toast((await res.json()).detail || 'Failed to open');
-}
-
-/* ── runs ── */
-async function runTask() {
-  const task = document.getElementById('task').value.trim();
-  if (!task) return;
-  const btn = document.getElementById('run-btn'); btn.disabled = true;
-  const res = await fetch('/api/runs', {method: 'POST',
-    headers: {'Content-Type': 'application/json'}, body: JSON.stringify({task})});
-  btn.disabled = false;
-  if (res.ok) { document.getElementById('task').value = ''; toast('Agent dispatched.'); refreshRuns(); }
   else toast((await res.json()).detail || 'Failed');
 }
 
-async function refreshRuns() {
-  const runs = await (await fetch('/api/runs')).json();
-  const el = document.getElementById('runs');
-  if (!runs.length) { el.innerHTML = '<div class="empty">No runs yet</div>'; return; }
-  el.innerHTML = runs.slice(0, 25).map(r => `
-    <div class="run ${openRuns.has(r.id) ? 'open' : ''}" id="run-${r.id}">
-      <div class="run-head" onclick="toggleRun(${r.id})">
-        <span class="pill ${esc(r.status)}">${esc(r.status === 'needs_confirmation' ? 'needs y/n' : r.status)}</span>
-        <span class="run-task">${esc(r.task)}</span>
-        <span class="run-meta">#${r.id} · ${r.iterations} it · ${esc(r.source)}</span>
-      </div>
-      <div class="run-body">
-        <div class="run-summary">${esc(r.result || '(running…)')}</div>
-        <div id="events-${r.id}" style="margin-top:8px"></div>
-      </div>
-    </div>`).join('');
+/* ── chat thread ── */
+async function runTask() {
+  const ta = document.getElementById('task');
+  const task = ta.value.trim();
+  if (!task) return;
+  const btn = document.getElementById('send-btn'); btn.disabled = true;
+  const res = await fetch('/api/runs', {method: 'POST',
+    headers: {'Content-Type': 'application/json'}, body: JSON.stringify({task})});
+  btn.disabled = false;
+  if (res.ok) { ta.value = ''; autosize(); refreshThread(true); }
+  else toast((await res.json()).detail || 'Failed to send');
 }
 
-async function toggleRun(id) {
-  if (openRuns.has(id)) { openRuns.delete(id); }
-  else {
-    openRuns.add(id);
-    const events = await (await fetch(`/api/runs/${id}/events`)).json();
-    const el = document.getElementById(`events-${id}`);
-    if (el) el.innerHTML = events.filter(e => e.event === 'skill_executed').map(e =>
-      `<div class="event"><span class="${e.ok ? 'ok' : 'fail'}">${e.ok ? '✓' : '✗'}</span>` +
-      `<span>${esc(e.skill)}</span><span style="color:var(--dim)">${esc((e.args || '').slice(0, 90))}</span></div>`
-    ).join('') || '<div class="hint">no skill calls</div>';
-  }
-  document.getElementById(`run-${id}`)?.classList.toggle('open');
+let lastSig = '';
+async function refreshThread(force) {
+  const [runs, proposals] = await Promise.all([
+    (await fetch('/api/runs')).json(),
+    (await fetch('/api/proposals')).json(),
+  ]);
+  const sig = JSON.stringify(runs.map(r => [r.id, r.status])) + '|' +
+              JSON.stringify(proposals.map(p => [p.id, p.status]));
+  if (sig === lastSig && !force) return;
+  lastSig = sig;
+
+  const byRun = {};
+  for (const p of proposals) (byRun[p.run_id] = byRun[p.run_id] || []).push(p);
+
+  const thread = document.getElementById('thread');
+  const ordered = runs.slice().reverse();
+  document.getElementById('empty')?.remove();
+  const nearBottom = thread.scrollHeight - thread.scrollTop - thread.clientHeight < 140;
+
+  thread.innerHTML = ordered.length ? ordered.map(r => {
+    const props = (byRun[r.id] || []).filter(p => p.status === 'pending');
+    const running = !r.result && (r.status === 'running' || !r.finished_at && r.status !== 'completed');
+    return `
+    <div class="msg user" id="msg-run-${r.id}"><div class="bubble-user">${esc(r.task)}</div></div>
+    <div class="msg"><div class="bubble-agent">
+      <div class="agent-name">Sylithe <span class="pill ${esc(r.status)}">${esc(
+        r.status === 'needs_confirmation' ? 'needs y/n' : r.status)}</span>
+        <span style="color:var(--dim)">${r.iterations} steps · ${esc(r.source)}</span></div>
+      <div class="agent-text">${esc(r.result || 'working on it…')}</div>
+      <button class="activity-toggle" onclick="toggleEvents(${r.id})">
+        ${openEvents.has(r.id) ? '▾ hide activity' : '▸ show activity'}</button>
+      <div class="events" id="events-${r.id}" style="display:${openEvents.has(r.id) ? '' : 'none'}"></div>
+      ${props.map(renderProposal).join('')}
+    </div></div>`;
+  }).join('') : `<div class="empty-thread" id="empty">
+      <h1>What should the agent work on?</h1>
+      <div>Open a project folder from the ＋ menu, then describe a task.</div></div>`;
+
+  if (nearBottom || force) thread.scrollTop = thread.scrollHeight;
+  for (const id of openEvents) loadEvents(id);
+  renderChats(runs);
 }
 
-/* ── proposals + diff ── */
+function renderChats(runs) {
+  document.getElementById('chats').innerHTML = runs.slice(0, 30).map(r =>
+    `<div class="chat-item" onclick="document.getElementById('msg-run-${r.id}')?.scrollIntoView({behavior:'smooth'})">${esc(r.task)}</div>`
+  ).join('');
+}
+
+async function toggleEvents(id) {
+  if (openEvents.has(id)) openEvents.delete(id); else openEvents.add(id);
+  refreshThread(true);
+}
+async function loadEvents(id) {
+  const el = document.getElementById(`events-${id}`);
+  if (!el) return;
+  const events = await (await fetch(`/api/runs/${id}/events`)).json();
+  el.innerHTML = events.filter(e => e.event === 'skill_executed').map(e =>
+    `<div class="event"><span class="${e.ok ? 'ok' : 'fail'}">${e.ok ? '✓' : '✗'}</span> ` +
+    `${esc(e.skill)} <span style="color:var(--dim)">${esc((e.args || '').slice(0, 80))}</span></div>`
+  ).join('') || '<div class="event" style="color:var(--dim)">no skill calls</div>';
+}
+
+/* ── proposals ── */
 function lineDiff(a, b) {
   const A = a.split('\n'), B = b.split('\n');
   const n = A.length, m = B.length;
-  if (n * m > 400000) {
-    return B.map(l => ({t: 'add', l})).concat(A.map(l => ({t: 'del', l})));
-  }
+  if (n * m > 400000) return B.map(l => ({t: 'add', l})).concat(A.map(l => ({t: 'del', l})));
   const dp = Array.from({length: n + 1}, () => new Uint16Array(m + 1));
   for (let i = n - 1; i >= 0; i--)
     for (let j = m - 1; j >= 0; j--)
@@ -345,84 +430,74 @@ function lineDiff(a, b) {
   while (j < m) out.push({t: 'add', l: B[j++]});
   return out;
 }
-
-function renderDiff(orig, prop) {
+function renderDiffHtml(orig, prop) {
   const lines = lineDiff(orig, prop);
-  const out = []; let ctxRun = [];
+  const out = []; let run = [];
   const flush = () => {
-    if (ctxRun.length > 6) {
-      out.push(...ctxRun.slice(0, 2));
-      out.push({t: 'ctx', l: `… ${ctxRun.length - 4} unchanged lines …`});
-      out.push(...ctxRun.slice(-2));
-    } else out.push(...ctxRun);
-    ctxRun = [];
+    if (run.length > 6) {
+      out.push(...run.slice(0, 2), {t: 'ctx', l: `… ${run.length - 4} unchanged lines …`}, ...run.slice(-2));
+    } else out.push(...run);
+    run = [];
   };
-  for (const ln of lines) { if (ln.t === 'ctx') ctxRun.push(ln); else { flush(); out.push(ln); } }
+  for (const ln of lines) { if (ln.t === 'ctx') run.push(ln); else { flush(); out.push(ln); } }
   flush();
-  return out.map(ln =>
-    `<div class="dl ${ln.t}">${ln.t === 'add' ? '+' : ln.t === 'del' ? '−' : ' '} ${esc(ln.l)}</div>`
-  ).join('');
+  return out.map(ln => `<div class="dl ${ln.t}">${ln.t === 'add' ? '+' : ln.t === 'del' ? '−' : ' '} ${esc(ln.l)}</div>`).join('');
 }
-
-async function refreshProposals() {
-  const props = await (await fetch('/api/proposals?status=pending')).json();
-  for (const id of ['prop-count', 'prop-count2']) {
-    const b = document.getElementById(id);
-    b.style.display = props.length ? '' : 'none';
-    b.textContent = props.length;
-  }
-  const el = document.getElementById('proposals');
-  if (!props.length) { el.innerHTML = '<div class="empty">No pending proposals</div>'; return; }
-  el.innerHTML = props.map(p => `
-    <div class="proposal">
-      <div class="proposal-head">
-        <div class="proposal-file">${esc(p.file_path)}</div>
-        <div class="proposal-desc">${esc(p.description)}</div>
-      </div>
-      <div class="diff">${renderDiff(p.original, p.proposed)}</div>
-      <div class="proposal-actions">
-        <button class="ghost-green" onclick="resolveProposal(${p.id}, 'approve')">✓ Yes, apply change</button>
-        <button class="ghost-red" onclick="resolveProposal(${p.id}, 'reject')">✗ No, reject</button>
-        <span class="hint">run #${p.run_id}</span>
-      </div>
-    </div>`).join('');
+function renderProposal(p) {
+  return `<div class="proposal">
+    <div class="proposal-head">
+      <div class="proposal-file">${esc(p.file_path)}</div>
+      <div class="proposal-desc">${esc(p.description)}</div>
+    </div>
+    <div class="diff">${renderDiffHtml(p.original, p.proposed)}</div>
+    <div class="proposal-actions">
+      <button class="btn-yes" onclick="resolveProposal(${p.id}, 'approve')">✓ Yes, apply</button>
+      <button class="btn-no" onclick="resolveProposal(${p.id}, 'reject')">✗ No</button>
+    </div></div>`;
 }
-
 async function resolveProposal(id, action) {
   const res = await fetch(`/api/proposals/${id}/${action}`, {method: 'POST'});
   const data = await res.json();
   toast(data.message || data.detail || 'done');
-  refreshProposals(); refreshWorkspace();
+  refreshThread(true); refreshWorkspace();
 }
 
-/* ── health + integrations ── */
+/* ── misc ── */
+function newChat() {
+  const ta = document.getElementById('task');
+  ta.value = ''; ta.focus();
+  document.getElementById('thread').scrollTop = document.getElementById('thread').scrollHeight;
+}
 async function refreshHealth() {
   try {
     const h = await (await fetch('/healthz')).json();
-    document.getElementById('health-dot').className = 'st ' +
-      (h.audit_chain_valid ? 'connected' : 'soon');
+    skillsCache = h.skills;
+    document.getElementById('health-dot').className = 'st ' + (h.audit_chain_valid ? 'ok' : 'bad');
     document.getElementById('health-text').textContent =
-      `${h.model} · audit ${h.audit_chain_valid ? 'ok' : 'BROKEN'}`;
-  } catch { document.getElementById('health-text').textContent = 'offline'; }
+      `agent online · audit ${h.audit_chain_valid ? 'ok' : 'BROKEN'}`;
+    document.getElementById('model-chip').textContent = 'Sylithe agent';
+  } catch {
+    document.getElementById('health-dot').className = 'st bad';
+    document.getElementById('health-text').textContent = 'offline';
+  }
 }
-
 async function refreshIntegrations() {
-  const items = await (await fetch('/api/integrations')).json();
-  document.getElementById('integrations').innerHTML = items.map(i => `
-    <div class="integration">
-      <span class="st ${i.status === 'connected' ? 'connected' : i.status === 'soon' ? 'soon' : 'setup'}"></span>
-      ${esc(i.name)}
-      <span style="margin-left:auto;color:var(--dim);font-size:11px">${esc(i.status)}</span>
-    </div>`).join('');
+  integrationsCache = await (await fetch('/api/integrations')).json();
 }
+function autosize() {
+  const ta = document.getElementById('task');
+  ta.style.height = 'auto'; ta.style.height = Math.min(ta.scrollHeight, 180) + 'px';
+}
+document.getElementById('task').addEventListener('input', autosize);
+document.getElementById('task').addEventListener('keydown', e => {
+  if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); runTask(); }
+});
 
-function refreshAll() { refreshWorkspace(); refreshRuns(); refreshProposals(); }
+function refreshAll() { refreshWorkspace(); refreshThread(); }
 refreshAll(); refreshHealth(); refreshIntegrations();
 setInterval(refreshAll, 3500);
 setInterval(refreshHealth, 30000);
-document.getElementById('task').addEventListener('keydown', e => {
-  if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') runTask();
-});
+setInterval(refreshIntegrations, 60000);
 </script>
 </body>
 </html>

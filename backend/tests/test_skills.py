@@ -60,6 +60,56 @@ def test_absolute_path_inside_workspace_allowed(registry, workspace):
     assert result.output == "hello"
 
 
+def test_run_command_allowed_binary(registry, workspace):
+    (workspace / "hello.txt").write_text("hi")
+    result = registry.execute("run_command", {"command": "ls"}, PolicyEngine(), {})
+    assert result.ok
+    assert "hello.txt" in result.output
+
+
+def test_run_command_blocks_unlisted_binary(registry):
+    result = registry.execute("run_command", {"command": "sudo reboot"},
+                              PolicyEngine(), {})
+    assert not result.ok
+    assert "not in the allowed DevOps toolchain" in result.output
+
+
+def test_run_command_redirects_git_to_run_git(registry):
+    result = registry.execute("run_command", {"command": "git status"},
+                              PolicyEngine(), {})
+    assert not result.ok
+    assert "run_git" in result.output
+
+
+def test_run_command_destructive_needs_confirmation(registry):
+    from sylithe.agent.policy import Verdict
+    result = registry.execute("run_command", {"command": "kubectl delete pod api-1"},
+                              PolicyEngine(), {})
+    assert not result.ok
+    assert result.decision.verdict is Verdict.REQUIRE_CONFIRMATION
+
+    confirmed = registry.execute("run_command", {"command": "ls"},
+                                 PolicyEngine(), {})
+    assert confirmed.ok  # plain read-only command unaffected
+
+
+def test_run_command_terraform_apply_needs_confirmation(registry):
+    from sylithe.agent.policy import Verdict
+    result = registry.execute("run_command", {"command": "terraform apply -auto-approve"},
+                              PolicyEngine(), {})
+    assert result.decision.verdict is Verdict.REQUIRE_CONFIRMATION
+
+
+def test_output_truncation_keeps_head_and_tail():
+    from sylithe.skills.builtin import _truncate
+    text = "START" + "x" * 20000 + "END"
+    out = _truncate(text)
+    assert out.startswith("START")
+    assert out.endswith("END")
+    assert "omitted" in out
+    assert len(out) < 7000
+
+
 def test_detect_conflicts_finds_conflicted_file(registry, workspace):
     (workspace / "app.py").write_text(
         "x = 1\n<<<<<<< HEAD\ny = 2\n=======\ny = 3\n>>>>>>> feature\n")

@@ -13,7 +13,9 @@ audit log live in ~/.sylithe so the agent gets smarter across all projects.
 import argparse
 import json
 import os
+import subprocess
 import sys
+import time
 from pathlib import Path
 
 from sylithe import __version__
@@ -166,6 +168,41 @@ def _print_mini_diff(original: str, proposed: str, max_lines: int = 30) -> None:
         print(_c(_DIM, f"    … {len(diff) - max_lines} more lines (see dashboard)"))
 
 
+def _quick_conflict_scan(workspace: Path) -> list[str]:
+    """Local, token-free check for unmerged paths (run at startup)."""
+    try:
+        result = subprocess.run(
+            ["git", "diff", "--name-only", "--diff-filter=U"],
+            cwd=workspace, capture_output=True, text=True, timeout=8,
+        )
+        return [f for f in result.stdout.strip().splitlines() if f]
+    except Exception:
+        return []
+
+
+def _watch_mode(runner: AgentRunner, repo: RepoContext, workspace: Path) -> None:
+    """Stay in the terminal and react to every new commit instantly."""
+    from sylithe.devops.watcher import GitWatcher
+
+    print(_c(_BOLD, "Sylithe agent watching ") + _c(_CYAN, repo.repo_name or str(workspace)))
+    print(_c(_DIM, "Every new commit triggers an instant review: conflicts, tests, "
+                   "proposed fixes. Ctrl-C to stop.\n"))
+
+    def dispatch(task: str) -> None:
+        print(_c(_BOLD, "\n⚡ New commit detected — Sylithe agent reviewing…"))
+        _run_task(runner, task, detect_repo(workspace))
+
+    watcher = GitWatcher(get_workspace=lambda: str(workspace),
+                         is_enabled=lambda: True, dispatch=dispatch)
+    watcher.poll_once()  # seed current HEAD
+    try:
+        while True:
+            time.sleep(5)
+            watcher.poll_once()
+    except KeyboardInterrupt:
+        print(_c(_DIM, "\nwatch stopped"))
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(
         prog="sylithe",
@@ -177,6 +214,8 @@ def main() -> None:
     parser.add_argument("--model", help="override model (deepseek-chat / deepseek-reasoner)")
     parser.add_argument("--max-iter", type=int, default=None,
                         help="max agent iterations (default: 50)")
+    parser.add_argument("--watch", "-w", action="store_true",
+                        help="watch the repo: every new commit triggers an instant agent review")
     parser.add_argument("--version", action="version", version=f"sylithe {__version__}")
     args = parser.parse_args()
 
@@ -187,6 +226,10 @@ def main() -> None:
     repo = detect_repo(workspace)
     runner = _build_runner(workspace, auto_yes=args.yes, model=args.model,
                            max_iter=args.max_iter)
+
+    if args.watch:
+        _watch_mode(runner, repo, workspace)
+        return
 
     if args.task:
         _run_task(runner, " ".join(args.task), repo)
@@ -207,6 +250,13 @@ def main() -> None:
         print(f"  remote {_c(_DIM, repo.remote_url or 'none')}")
     else:
         print(f"  folder {_c(_DIM, str(workspace))}  {_c(_YELLOW, '(not a git repo)')}")
+
+    conflicted = _quick_conflict_scan(workspace) if repo.is_git else []
+    if conflicted:
+        print(_c(_RED, f"\n  ⚠ {len(conflicted)} file(s) have merge conflicts:"))
+        for f in conflicted[:8]:
+            print(_c(_YELLOW, f"    {f}"))
+        print(_c(_BOLD, "  Type 'fix' to resolve them now."))
     print(_c(_DIM, "\nDescribe a task. Ctrl-D or 'exit' to quit.\n"))
     # ────────────────────────────────────────────────────────────────────────
 
@@ -220,8 +270,12 @@ def main() -> None:
             continue
         if task.lower() in ("exit", "quit"):
             break
+        if task.lower() == "fix":
+            task = ("Resolve all merge conflicts in this repo as fast as possible: "
+                    "detect_conflicts, auto-resolve what is safe, escalate the rest "
+                    "with both sides shown, then run tests and summarize.")
         try:
-            _run_task(runner, task, repo)
+            _run_task(runner, task, detect_repo(workspace))
         except KeyboardInterrupt:
             print(_c(_YELLOW, "\n  interrupted"))
 
