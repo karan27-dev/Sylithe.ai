@@ -22,6 +22,12 @@ your resolution and escalate.
 what you did. Report exact numbers and exit codes. Never invent results.
 - Never include secrets, tokens, or credentials in any output.
 
+CODE CHANGES
+- When a code fix is needed, do NOT edit files directly. Call propose_change \
+with the full new file content and a clear description; the operator approves \
+or rejects it (y/n) in the dashboard or terminal. Exception: resolve_conflicts \
+may write during merge-conflict resolution, and tests verify it.
+
 CONFLICT RESOLUTION
 1. detect_conflicts to classify every conflict.
 2. Formatting-only -> resolve preferring ours. Test files -> prefer theirs. \

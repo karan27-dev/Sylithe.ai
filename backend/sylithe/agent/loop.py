@@ -44,6 +44,7 @@ class AgentResult:
     summary: str
     iterations: int
     pending_confirmations: list[str] = field(default_factory=list)
+    run_id: int = 0
 
 
 @dataclass
@@ -79,7 +80,7 @@ class AgentRunner:
             {"role": "system", "content": SYSTEM_PROMPT},
             {"role": "user", "content": first_message},
         ]
-        context: dict[str, Any] = {}
+        context: dict[str, Any] = {"run_id": run_row.id}
         pending: list[str] = []
         fail_counts: dict[tuple[str, str], int] = {}
         iterations = 0
@@ -101,7 +102,7 @@ class AgentRunner:
                                            iterations=iterations)
                     self.audit.record("agent_run_finished", run_id=run_row.id,
                                       status=status, iterations=iterations)
-                    return AgentResult(status, summary, iterations, pending)
+                    return AgentResult(status, summary, iterations, pending, run_row.id)
 
                 messages.append({
                     "role": "assistant",
@@ -171,7 +172,7 @@ class AgentRunner:
                                    iterations=iterations)
             self.audit.record("agent_run_finished", run_id=run_row.id,
                               status="max_iterations", iterations=iterations)
-            return AgentResult("max_iterations", summary, iterations, pending)
+            return AgentResult("max_iterations", summary, iterations, pending, run_row.id)
 
         except Exception as exc:
             summary = redact_secrets(f"{type(exc).__name__}: {exc}")
@@ -179,4 +180,4 @@ class AgentRunner:
                                    iterations=iterations)
             self.audit.record("agent_run_finished", run_id=run_row.id,
                               status="error", error=summary, iterations=iterations)
-            return AgentResult("error", summary, iterations, pending)
+            return AgentResult("error", summary, iterations, pending, run_row.id)

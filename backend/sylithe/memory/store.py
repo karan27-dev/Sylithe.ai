@@ -12,7 +12,7 @@ from datetime import datetime, timezone
 from sqlalchemy import create_engine, select
 from sqlalchemy.orm import Session, sessionmaker
 
-from sylithe.memory.models import AgentRun, Base, Pattern
+from sylithe.memory.models import AgentRun, Base, Pattern, Proposal
 
 _WORD_RE = re.compile(r"[a-z0-9_\-]{3,}")
 
@@ -70,6 +70,44 @@ class MemoryStore:
             scored.append(ScoredPattern(pattern=p, score=round(score, 4)))
         scored.sort(key=lambda sp: sp.score, reverse=True)
         return scored[:limit]
+
+    # -- proposals ---------------------------------------------------------
+
+    def create_proposal(self, *, file_path: str, description: str,
+                        original_content: str, proposed_content: str,
+                        run_id: int = 0) -> Proposal:
+        proposal = Proposal(
+            run_id=run_id, file_path=file_path, description=description,
+            original_content=original_content, proposed_content=proposed_content,
+        )
+        with self.session() as s:
+            s.add(proposal)
+            s.commit()
+        return proposal
+
+    def list_proposals(self, status: str | None = None, run_id: int | None = None,
+                       limit: int = 100) -> list[Proposal]:
+        with self.session() as s:
+            stmt = select(Proposal).order_by(Proposal.id.desc()).limit(limit)
+            if status:
+                stmt = stmt.where(Proposal.status == status)
+            if run_id is not None:
+                stmt = stmt.where(Proposal.run_id == run_id)
+            return list(s.scalars(stmt).all())
+
+    def get_proposal(self, proposal_id: int) -> Proposal | None:
+        with self.session() as s:
+            return s.get(Proposal, proposal_id)
+
+    def resolve_proposal(self, proposal_id: int, status: str) -> Proposal | None:
+        with self.session() as s:
+            proposal = s.get(Proposal, proposal_id)
+            if proposal is None:
+                return None
+            proposal.status = status
+            proposal.resolved_at = datetime.now(timezone.utc)
+            s.commit()
+            return proposal
 
     # -- agent runs --------------------------------------------------------
 

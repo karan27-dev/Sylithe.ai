@@ -48,6 +48,21 @@ First run asks for your DeepSeek API key and saves it to `~/.sylithe/config.env`
 so the agent gets smarter across all your projects. Destructive actions prompt
 `Allow? [y/N]` right in the terminal.
 
+## Agent console (web dashboard)
+
+Run the server and open **http://localhost:8000** — a full agent console:
+
+- **Open folder** — point the agent at any project under your home directory; it
+  detects the git repo, branch, and state instantly.
+- **Watch git** — toggle on and every new commit triggers an autonomous review:
+  the agent inspects the change, runs tests, and proposes line-level fixes.
+- **Proposals (y/n)** — the agent never edits your code from the web. It files a
+  proposal with a diff; you click *Yes, apply* or *No, reject*. Stale proposals
+  (file changed since) are auto-detected and never applied.
+- **Live runs** — expand any run to see every skill call it made.
+- **Connectivity sidebar** — DeepSeek, GitHub, local git status, plus upcoming
+  integrations (Docker, Kubernetes, Prometheus, Grafana, Sentry, PagerDuty, Slack).
+
 ## Quick start — server + dashboard
 
 ```bash

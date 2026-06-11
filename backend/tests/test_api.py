@@ -27,9 +27,44 @@ def test_create_and_list_runs(make_state):
     client, _ = _client(make_state)
     res = client.post("/api/runs", json={"task": "say done"})
     assert res.status_code == 200
-    assert res.json()["status"] == "completed"
+    assert res.json()["status"] == "dispatched"
+    # TestClient executes background tasks before returning, so the run exists
     runs = client.get("/api/runs").json()
     assert runs[0]["task"] == "say done"
+    assert runs[0]["status"] == "completed"
+
+
+def test_workspace_info_and_switch(make_state, tmp_path):
+    client, _ = _client(make_state)
+    info = client.get("/api/workspace").json()
+    assert "path" in info and "repo" in info
+
+    new_ws = tmp_path / "other-project"
+    new_ws.mkdir()
+    res = client.post("/api/workspace", json={"path": str(new_ws)})
+    assert res.status_code == 200
+    assert res.json()["path"] == str(new_ws.resolve())
+
+    res = client.post("/api/workspace", json={"path": "/definitely/not/a/dir"})
+    assert res.status_code == 400
+
+
+def test_fs_browse_restricted_to_home(make_state):
+    client, _ = _client(make_state)
+    res = client.get("/api/fs", params={"path": "/etc"})
+    assert res.status_code == 403
+    res = client.get("/api/fs", params={"path": "~"})
+    assert res.status_code == 200
+    assert "dirs" in res.json()
+
+
+def test_integrations_listed(make_state):
+    client, _ = _client(make_state)
+    items = res = client.get("/api/integrations").json()
+    names = {i["name"] for i in items}
+    assert {"DeepSeek", "GitHub", "Kubernetes"} <= names
+    deepseek = next(i for i in items if i["name"] == "DeepSeek")
+    assert deepseek["status"] == "connected"  # test settings set a key
 
 
 def test_incident_dispatches_agent(make_state):

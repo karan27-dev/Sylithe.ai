@@ -25,7 +25,7 @@ class RepoContext:
     def repo_name(self) -> str:
         """Best-guess human name: owner/repo or just folder name."""
         if self.remote_url:
-            name = self.remote_url.rstrip("/").rstrip(".git")
+            name = self.remote_url.rstrip("/").removesuffix(".git")
             return name.split(":")[-1].split("/")[-2] + "/" + name.split("/")[-1]
         return Path(self.root).name if self.root else ""
 

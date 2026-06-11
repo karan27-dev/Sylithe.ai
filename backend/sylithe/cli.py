@@ -20,6 +20,7 @@ from sylithe import __version__
 from sylithe.agent.loop import AgentRunner, deepseek_client
 from sylithe.audit import AuditLog
 from sylithe.config import Settings
+from sylithe.devops.proposals import apply_proposal, reject_proposal
 from sylithe.devops.repo import RepoContext, detect as detect_repo
 from sylithe.memory.store import MemoryStore
 from sylithe.skills.builtin import build_registry
@@ -123,6 +124,46 @@ def _run_task(runner: AgentRunner, task: str, repo: RepoContext) -> None:
     color = _GREEN if result.status == "completed" else _RED
     print(f"\n{_c(color, '●')} {result.summary}")
     print(_c(_DIM, f"  [{result.status} · {result.iterations} iteration(s)]"))
+    _review_proposals(runner, result.run_id)
+
+
+def _review_proposals(runner: AgentRunner, run_id: int) -> None:
+    """y/n review of code changes the agent proposed during this run."""
+    proposals = runner.memory.list_proposals(status="pending", run_id=run_id)
+    if not proposals:
+        return
+    workspace = Path(runner.settings.workspace_root)
+    print(_c(_BOLD, f"\n{len(proposals)} proposed change(s) need your y/n:"))
+    for p in proposals:
+        print(f"\n  {_c(_CYAN, p.file_path)}")
+        print(f"  {p.description}")
+        _print_mini_diff(p.original_content, p.proposed_content)
+        try:
+            answer = input(_c(_BOLD, "  Apply this change? [y/N] ")).strip().lower()
+        except (EOFError, KeyboardInterrupt):
+            print(_c(_DIM, "\n  left pending — review later in the dashboard"))
+            return
+        if answer in ("y", "yes"):
+            ok, message = apply_proposal(runner.memory, workspace, p.id)
+            print(_c(_GREEN if ok else _RED, f"  {message}"))
+        else:
+            ok, message = reject_proposal(runner.memory, p.id)
+            print(_c(_DIM, f"  {message}"))
+
+
+def _print_mini_diff(original: str, proposed: str, max_lines: int = 30) -> None:
+    import difflib
+    diff = list(difflib.unified_diff(
+        original.splitlines(), proposed.splitlines(), lineterm="", n=2))[2:]
+    for line in diff[:max_lines]:
+        if line.startswith("+"):
+            print(_c(_GREEN, f"    {line}"))
+        elif line.startswith("-"):
+            print(_c(_RED, f"    {line}"))
+        else:
+            print(_c(_DIM, f"    {line}"))
+    if len(diff) > max_lines:
+        print(_c(_DIM, f"    … {len(diff) - max_lines} more lines (see dashboard)"))
 
 
 def main() -> None:

@@ -27,6 +27,22 @@ class Pattern(Base):
     created_at: Mapped[datetime] = mapped_column(default=_utcnow)
 
 
+class Proposal(Base):
+    """A code change the agent suggests; the operator approves/rejects (y/n)."""
+
+    __tablename__ = "proposals"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    run_id: Mapped[int] = mapped_column(Integer, default=0, index=True)
+    file_path: Mapped[str] = mapped_column(String(1024))
+    description: Mapped[str] = mapped_column(Text, default="")
+    original_content: Mapped[str] = mapped_column(Text, default="")
+    proposed_content: Mapped[str] = mapped_column(Text, default="")
+    status: Mapped[str] = mapped_column(String(32), default="pending", index=True)
+    created_at: Mapped[datetime] = mapped_column(default=_utcnow)
+    resolved_at: Mapped[datetime | None] = mapped_column(nullable=True)
+
+
 class AgentRun(Base):
     """One agent task execution, for the dashboard and audit cross-reference."""
 

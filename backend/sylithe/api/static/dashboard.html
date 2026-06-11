@@ -1,0 +1,428 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Sylithe — Agent Console</title>
+<style>
+  :root {
+    --bg: #0a0a0c; --panel: #111114; --panel2: #16161a; --border: #232328;
+    --text: #ededf0; --muted: #8a8a94; --dim: #5a5a64;
+    --accent: #7c7ff2; --accent-soft: rgba(124,127,242,.12);
+    --green: #4ade80; --red: #f87171; --amber: #fbbf24;
+    --radius: 12px; --radius-sm: 8px;
+    --mono: ui-monospace, "SF Mono", Menlo, monospace;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--text);
+         font: 14px/1.55 -apple-system, "Inter", "Segoe UI", sans-serif;
+         display: flex; height: 100vh; overflow: hidden; }
+  ::-webkit-scrollbar { width: 8px; height: 8px; }
+  ::-webkit-scrollbar-thumb { background: #2a2a30; border-radius: 4px; }
+
+  /* ── sidebar ── */
+  aside { width: 232px; min-width: 232px; background: var(--panel);
+          border-right: 1px solid var(--border); display: flex;
+          flex-direction: column; padding: 18px 12px; gap: 4px; }
+  .logo { font-weight: 700; letter-spacing: .14em; font-size: 15px;
+          padding: 4px 10px 16px; display: flex; align-items: center; gap: 8px; }
+  .logo .dot { width: 9px; height: 9px; border-radius: 50%; background: var(--accent);
+               box-shadow: 0 0 10px var(--accent); }
+  .nav-label { font-size: 11px; text-transform: uppercase; letter-spacing: .1em;
+               color: var(--dim); padding: 14px 10px 6px; }
+  .nav-item { display: flex; align-items: center; gap: 9px; padding: 7px 10px;
+              border-radius: var(--radius-sm); color: var(--muted); cursor: pointer;
+              user-select: none; }
+  .nav-item:hover { background: var(--panel2); color: var(--text); }
+  .nav-item.active { background: var(--accent-soft); color: var(--accent); }
+  .nav-item svg { width: 15px; height: 15px; flex: none; }
+  .integration { display: flex; align-items: center; gap: 8px; padding: 5px 10px;
+                 color: var(--muted); font-size: 12.5px; }
+  .st { width: 7px; height: 7px; border-radius: 50%; flex: none; }
+  .st.connected { background: var(--green); }
+  .st.setup { background: var(--amber); }
+  .st.soon { background: var(--dim); }
+  .integrations-wrap { overflow-y: auto; flex: 1; }
+
+  /* ── main ── */
+  main { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
+  header { display: flex; align-items: center; gap: 12px; padding: 14px 22px;
+           border-bottom: 1px solid var(--border); background: var(--panel); }
+  .repo-chip { display: flex; align-items: center; gap: 9px; background: var(--panel2);
+               border: 1px solid var(--border); border-radius: var(--radius-sm);
+               padding: 7px 12px; font-family: var(--mono); font-size: 12.5px; }
+  .branch { color: var(--accent); }
+  .dirty { color: var(--amber); }
+  .spacer { flex: 1; }
+  button { background: var(--panel2); color: var(--text); border: 1px solid var(--border);
+           border-radius: var(--radius-sm); padding: 7px 14px; font: inherit;
+           font-size: 13px; cursor: pointer; }
+  button:hover { border-color: var(--accent); }
+  button.primary { background: var(--accent); border-color: var(--accent); color: #0a0a0c;
+                   font-weight: 600; }
+  button.ghost-green { color: var(--green); border-color: rgba(74,222,128,.35); background: transparent; }
+  button.ghost-red { color: var(--red); border-color: rgba(248,113,113,.35); background: transparent; }
+  button:disabled { opacity: .45; cursor: default; }
+  .watch-btn.on { background: rgba(74,222,128,.12); border-color: rgba(74,222,128,.4);
+                  color: var(--green); }
+
+  .content { flex: 1; overflow-y: auto; padding: 22px; display: grid;
+             grid-template-columns: minmax(0, 1.25fr) minmax(0, 1fr); gap: 18px;
+             align-content: start; }
+  .full { grid-column: 1 / -1; }
+  .card { background: var(--panel); border: 1px solid var(--border);
+          border-radius: var(--radius); padding: 16px 18px; }
+  .card h2 { margin: 0 0 12px; font-size: 13px; font-weight: 600; color: var(--muted);
+             text-transform: uppercase; letter-spacing: .08em;
+             display: flex; align-items: center; gap: 8px; }
+  .badge { background: var(--accent-soft); color: var(--accent); border-radius: 20px;
+           padding: 1px 9px; font-size: 11.5px; font-weight: 600; }
+
+  textarea { width: 100%; min-height: 76px; background: var(--bg); color: var(--text);
+             border: 1px solid var(--border); border-radius: var(--radius-sm);
+             padding: 11px 13px; font: inherit; resize: vertical; }
+  textarea:focus { outline: none; border-color: var(--accent); }
+  .composer-row { display: flex; gap: 10px; margin-top: 10px; align-items: center; }
+  .hint { color: var(--dim); font-size: 12px; }
+
+  .run { border: 1px solid var(--border); border-radius: var(--radius-sm);
+         padding: 11px 13px; margin-bottom: 9px; background: var(--panel2); }
+  .run-head { display: flex; gap: 10px; align-items: baseline; cursor: pointer; }
+  .pill { font-size: 11px; font-weight: 700; border-radius: 20px; padding: 1px 9px;
+          flex: none; text-transform: uppercase; letter-spacing: .04em; }
+  .pill.completed { background: rgba(74,222,128,.12); color: var(--green); }
+  .pill.running { background: rgba(251,191,36,.12); color: var(--amber); }
+  .pill.error, .pill.max_iterations { background: rgba(248,113,113,.12); color: var(--red); }
+  .pill.needs_confirmation { background: var(--accent-soft); color: var(--accent); }
+  .run-task { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis;
+              white-space: nowrap; }
+  .run-meta { color: var(--dim); font-size: 12px; flex: none; }
+  .run-body { display: none; margin-top: 10px; border-top: 1px solid var(--border);
+              padding-top: 10px; }
+  .run.open .run-body { display: block; }
+  .run-summary { white-space: pre-wrap; color: var(--muted); font-size: 13px;
+                 max-height: 260px; overflow-y: auto; }
+  .event { font-family: var(--mono); font-size: 12px; color: var(--muted);
+           padding: 2px 0; display: flex; gap: 8px; }
+  .event .ok { color: var(--green); } .event .fail { color: var(--red); }
+
+  .proposal { border: 1px solid var(--border); border-radius: var(--radius-sm);
+              margin-bottom: 12px; background: var(--panel2); overflow: hidden; }
+  .proposal-head { padding: 11px 13px; }
+  .proposal-file { font-family: var(--mono); font-size: 12.5px; color: var(--accent); }
+  .proposal-desc { color: var(--muted); font-size: 13px; margin-top: 4px; }
+  .diff { font-family: var(--mono); font-size: 12px; max-height: 320px;
+          overflow: auto; border-top: 1px solid var(--border); background: var(--bg); }
+  .dl { padding: 1px 12px; white-space: pre-wrap; word-break: break-all; }
+  .dl.add { background: rgba(74,222,128,.09); color: #b5f5cf; }
+  .dl.del { background: rgba(248,113,113,.09); color: #fac7c7; text-decoration: line-through;
+            text-decoration-color: rgba(248,113,113,.5); }
+  .dl.ctx { color: var(--dim); }
+  .proposal-actions { display: flex; gap: 10px; padding: 11px 13px;
+                      border-top: 1px solid var(--border); align-items: center; }
+  .empty { color: var(--dim); text-align: center; padding: 26px 0; font-size: 13px; }
+
+  /* ── modal ── */
+  .modal-bg { position: fixed; inset: 0; background: rgba(0,0,0,.6); display: none;
+              align-items: center; justify-content: center; z-index: 10; }
+  .modal-bg.show { display: flex; }
+  .modal { width: 520px; max-height: 70vh; background: var(--panel);
+           border: 1px solid var(--border); border-radius: var(--radius);
+           display: flex; flex-direction: column; }
+  .modal h3 { margin: 0; padding: 16px 18px 10px; font-size: 15px; }
+  .modal .path { font-family: var(--mono); font-size: 12px; color: var(--muted);
+                 padding: 0 18px 10px; word-break: break-all; }
+  .dir-list { flex: 1; overflow-y: auto; border-top: 1px solid var(--border);
+              padding: 6px 0; min-height: 200px; }
+  .dir { padding: 7px 18px; cursor: pointer; display: flex; gap: 9px; align-items: center; }
+  .dir:hover { background: var(--panel2); }
+  .modal-actions { display: flex; gap: 10px; padding: 13px 18px;
+                   border-top: 1px solid var(--border); justify-content: flex-end; }
+  .git-tag { font-size: 11px; color: var(--green); border: 1px solid rgba(74,222,128,.35);
+             border-radius: 20px; padding: 0 8px; }
+  .toast { position: fixed; bottom: 22px; right: 22px; background: var(--panel2);
+           border: 1px solid var(--border); border-left: 3px solid var(--accent);
+           border-radius: var(--radius-sm); padding: 11px 16px; font-size: 13px;
+           display: none; z-index: 20; max-width: 380px; }
+</style>
+</head>
+<body>
+
+<aside>
+  <div class="logo"><span class="dot"></span> SYLITHE</div>
+  <div class="nav-item active" onclick="scrollToEl('composer')">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12h4l3 8 4-16 3 8h4"/></svg>
+    Agent console</div>
+  <div class="nav-item" onclick="scrollToEl('runs-card')">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 3"/></svg>
+    Runs</div>
+  <div class="nav-item" onclick="scrollToEl('proposals-card')">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 12l2 2 4-5"/><rect x="3" y="4" width="18" height="16" rx="2"/></svg>
+    Proposals <span class="badge" id="prop-count" style="display:none">0</span></div>
+  <div class="nav-label">Connectivity</div>
+  <div class="integrations-wrap" id="integrations"></div>
+  <div class="integration" style="border-top:1px solid var(--border); padding-top:10px;">
+    <span class="st" id="health-dot"></span><span id="health-text">checking…</span>
+  </div>
+</aside>
+
+<main>
+  <header>
+    <div class="repo-chip" id="repo-chip">loading workspace…</div>
+    <div class="spacer"></div>
+    <button class="watch-btn" id="watch-btn" onclick="toggleWatch()">⏵ Watch git: off</button>
+    <button class="primary" onclick="openFolderModal()">Open folder</button>
+  </header>
+
+  <div class="content">
+    <div class="card full" id="composer">
+      <h2>New task</h2>
+      <textarea id="task" placeholder="e.g. Review the latest commit, run the tests, and propose fixes for anything broken…"></textarea>
+      <div class="composer-row">
+        <button class="primary" id="run-btn" onclick="runTask()">Run agent</button>
+        <span class="hint">The agent never edits code without your y/n — changes arrive as proposals.</span>
+      </div>
+    </div>
+
+    <div class="card" id="runs-card">
+      <h2>Agent runs</h2>
+      <div id="runs"><div class="empty">No runs yet</div></div>
+    </div>
+
+    <div class="card" id="proposals-card">
+      <h2>Proposed changes <span class="badge" id="prop-count2" style="display:none">0</span></h2>
+      <div id="proposals"><div class="empty">No pending proposals</div></div>
+    </div>
+  </div>
+</main>
+
+<div class="modal-bg" id="modal-bg" onclick="if(event.target===this)closeFolderModal()">
+  <div class="modal">
+    <h3>Open project folder</h3>
+    <div class="path" id="modal-path"></div>
+    <div class="dir-list" id="dir-list"></div>
+    <div class="modal-actions">
+      <span class="git-tag" id="modal-git" style="display:none">git repo</span>
+      <div class="spacer"></div>
+      <button onclick="closeFolderModal()">Cancel</button>
+      <button class="primary" onclick="openHere()">Open this folder</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+let modalPath = null;
+const openRuns = new Set();
+
+function esc(s) { const d = document.createElement('div'); d.textContent = s ?? ''; return d.innerHTML; }
+function toast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg; t.style.display = 'block';
+  clearTimeout(t._h); t._h = setTimeout(() => t.style.display = 'none', 4000);
+}
+function scrollToEl(id) { document.getElementById(id).scrollIntoView({behavior: 'smooth'}); }
+
+/* ── workspace ── */
+async function refreshWorkspace() {
+  const w = await (await fetch('/api/workspace')).json();
+  const r = w.repo;
+  let html;
+  if (r.is_git) {
+    html = `<strong>${esc(r.name)}</strong> <span class="branch">⎇ ${esc(r.branch)}</span>`;
+    if (r.dirty) html += ` <span class="dirty">●</span>`;
+    if (r.ahead) html += ` <span class="dirty">↑${r.ahead}</span>`;
+    if (r.behind) html += ` <span style="color:var(--red)">↓${r.behind}</span>`;
+    html += ` <span style="color:var(--dim)">${esc(r.last_commit.slice(0, 46))}</span>`;
+  } else {
+    html = `${esc(w.path)} <span style="color:var(--amber)">(not a git repo)</span>`;
+  }
+  document.getElementById('repo-chip').innerHTML = html;
+  const wb = document.getElementById('watch-btn');
+  wb.className = 'watch-btn' + (w.watch_enabled ? ' on' : '');
+  wb.textContent = w.watch_enabled ? '⏸ Watch git: on' : '⏵ Watch git: off';
+  wb.dataset.on = w.watch_enabled ? '1' : '';
+}
+
+async function toggleWatch() {
+  const on = !document.getElementById('watch-btn').dataset.on;
+  await fetch('/api/watch', {method: 'POST', headers: {'Content-Type': 'application/json'},
+                             body: JSON.stringify({enabled: on})});
+  toast(on ? 'Git watch enabled — new commits trigger the agent automatically.'
+           : 'Git watch disabled.');
+  refreshWorkspace();
+}
+
+/* ── folder picker ── */
+async function browse(path) {
+  const res = await fetch('/api/fs?path=' + encodeURIComponent(path || '~'));
+  if (!res.ok) { toast((await res.json()).detail || 'Cannot open folder'); return; }
+  const data = await res.json();
+  modalPath = data.path;
+  document.getElementById('modal-path').textContent = data.path;
+  document.getElementById('modal-git').style.display = data.is_git ? '' : 'none';
+  const list = document.getElementById('dir-list');
+  let html = '';
+  if (data.parent) html += `<div class="dir" onclick="browse('${esc(data.parent).replace(/'/g, "\\'")}')">↩ ..</div>`;
+  for (const d of data.dirs) {
+    const full = data.path.replace(/\/$/, '') + '/' + d;
+    html += `<div class="dir" onclick="browse('${esc(full).replace(/'/g, "\\'")}')">📁 ${esc(d)}</div>`;
+  }
+  list.innerHTML = html || '<div class="empty">No subfolders</div>';
+}
+function openFolderModal() { document.getElementById('modal-bg').classList.add('show'); browse('~'); }
+function closeFolderModal() { document.getElementById('modal-bg').classList.remove('show'); }
+async function openHere() {
+  const res = await fetch('/api/workspace', {method: 'POST',
+    headers: {'Content-Type': 'application/json'}, body: JSON.stringify({path: modalPath})});
+  if (res.ok) { closeFolderModal(); toast('Workspace: ' + modalPath); refreshAll(); }
+  else toast((await res.json()).detail || 'Failed to open');
+}
+
+/* ── runs ── */
+async function runTask() {
+  const task = document.getElementById('task').value.trim();
+  if (!task) return;
+  const btn = document.getElementById('run-btn'); btn.disabled = true;
+  const res = await fetch('/api/runs', {method: 'POST',
+    headers: {'Content-Type': 'application/json'}, body: JSON.stringify({task})});
+  btn.disabled = false;
+  if (res.ok) { document.getElementById('task').value = ''; toast('Agent dispatched.'); refreshRuns(); }
+  else toast((await res.json()).detail || 'Failed');
+}
+
+async function refreshRuns() {
+  const runs = await (await fetch('/api/runs')).json();
+  const el = document.getElementById('runs');
+  if (!runs.length) { el.innerHTML = '<div class="empty">No runs yet</div>'; return; }
+  el.innerHTML = runs.slice(0, 25).map(r => `
+    <div class="run ${openRuns.has(r.id) ? 'open' : ''}" id="run-${r.id}">
+      <div class="run-head" onclick="toggleRun(${r.id})">
+        <span class="pill ${esc(r.status)}">${esc(r.status === 'needs_confirmation' ? 'needs y/n' : r.status)}</span>
+        <span class="run-task">${esc(r.task)}</span>
+        <span class="run-meta">#${r.id} · ${r.iterations} it · ${esc(r.source)}</span>
+      </div>
+      <div class="run-body">
+        <div class="run-summary">${esc(r.result || '(running…)')}</div>
+        <div id="events-${r.id}" style="margin-top:8px"></div>
+      </div>
+    </div>`).join('');
+}
+
+async function toggleRun(id) {
+  if (openRuns.has(id)) { openRuns.delete(id); }
+  else {
+    openRuns.add(id);
+    const events = await (await fetch(`/api/runs/${id}/events`)).json();
+    const el = document.getElementById(`events-${id}`);
+    if (el) el.innerHTML = events.filter(e => e.event === 'skill_executed').map(e =>
+      `<div class="event"><span class="${e.ok ? 'ok' : 'fail'}">${e.ok ? '✓' : '✗'}</span>` +
+      `<span>${esc(e.skill)}</span><span style="color:var(--dim)">${esc((e.args || '').slice(0, 90))}</span></div>`
+    ).join('') || '<div class="hint">no skill calls</div>';
+  }
+  document.getElementById(`run-${id}`)?.classList.toggle('open');
+}
+
+/* ── proposals + diff ── */
+function lineDiff(a, b) {
+  const A = a.split('\n'), B = b.split('\n');
+  const n = A.length, m = B.length;
+  if (n * m > 400000) {
+    return B.map(l => ({t: 'add', l})).concat(A.map(l => ({t: 'del', l})));
+  }
+  const dp = Array.from({length: n + 1}, () => new Uint16Array(m + 1));
+  for (let i = n - 1; i >= 0; i--)
+    for (let j = m - 1; j >= 0; j--)
+      dp[i][j] = A[i] === B[j] ? dp[i+1][j+1] + 1 : Math.max(dp[i+1][j], dp[i][j+1]);
+  const out = []; let i = 0, j = 0;
+  while (i < n && j < m) {
+    if (A[i] === B[j]) { out.push({t: 'ctx', l: A[i]}); i++; j++; }
+    else if (dp[i+1][j] >= dp[i][j+1]) { out.push({t: 'del', l: A[i]}); i++; }
+    else { out.push({t: 'add', l: B[j]}); j++; }
+  }
+  while (i < n) out.push({t: 'del', l: A[i++]});
+  while (j < m) out.push({t: 'add', l: B[j++]});
+  return out;
+}
+
+function renderDiff(orig, prop) {
+  const lines = lineDiff(orig, prop);
+  const out = []; let ctxRun = [];
+  const flush = () => {
+    if (ctxRun.length > 6) {
+      out.push(...ctxRun.slice(0, 2));
+      out.push({t: 'ctx', l: `… ${ctxRun.length - 4} unchanged lines …`});
+      out.push(...ctxRun.slice(-2));
+    } else out.push(...ctxRun);
+    ctxRun = [];
+  };
+  for (const ln of lines) { if (ln.t === 'ctx') ctxRun.push(ln); else { flush(); out.push(ln); } }
+  flush();
+  return out.map(ln =>
+    `<div class="dl ${ln.t}">${ln.t === 'add' ? '+' : ln.t === 'del' ? '−' : ' '} ${esc(ln.l)}</div>`
+  ).join('');
+}
+
+async function refreshProposals() {
+  const props = await (await fetch('/api/proposals?status=pending')).json();
+  for (const id of ['prop-count', 'prop-count2']) {
+    const b = document.getElementById(id);
+    b.style.display = props.length ? '' : 'none';
+    b.textContent = props.length;
+  }
+  const el = document.getElementById('proposals');
+  if (!props.length) { el.innerHTML = '<div class="empty">No pending proposals</div>'; return; }
+  el.innerHTML = props.map(p => `
+    <div class="proposal">
+      <div class="proposal-head">
+        <div class="proposal-file">${esc(p.file_path)}</div>
+        <div class="proposal-desc">${esc(p.description)}</div>
+      </div>
+      <div class="diff">${renderDiff(p.original, p.proposed)}</div>
+      <div class="proposal-actions">
+        <button class="ghost-green" onclick="resolveProposal(${p.id}, 'approve')">✓ Yes, apply change</button>
+        <button class="ghost-red" onclick="resolveProposal(${p.id}, 'reject')">✗ No, reject</button>
+        <span class="hint">run #${p.run_id}</span>
+      </div>
+    </div>`).join('');
+}
+
+async function resolveProposal(id, action) {
+  const res = await fetch(`/api/proposals/${id}/${action}`, {method: 'POST'});
+  const data = await res.json();
+  toast(data.message || data.detail || 'done');
+  refreshProposals(); refreshWorkspace();
+}
+
+/* ── health + integrations ── */
+async function refreshHealth() {
+  try {
+    const h = await (await fetch('/healthz')).json();
+    document.getElementById('health-dot').className = 'st ' +
+      (h.audit_chain_valid ? 'connected' : 'soon');
+    document.getElementById('health-text').textContent =
+      `${h.model} · audit ${h.audit_chain_valid ? 'ok' : 'BROKEN'}`;
+  } catch { document.getElementById('health-text').textContent = 'offline'; }
+}
+
+async function refreshIntegrations() {
+  const items = await (await fetch('/api/integrations')).json();
+  document.getElementById('integrations').innerHTML = items.map(i => `
+    <div class="integration">
+      <span class="st ${i.status === 'connected' ? 'connected' : i.status === 'soon' ? 'soon' : 'setup'}"></span>
+      ${esc(i.name)}
+      <span style="margin-left:auto;color:var(--dim);font-size:11px">${esc(i.status)}</span>
+    </div>`).join('');
+}
+
+function refreshAll() { refreshWorkspace(); refreshRuns(); refreshProposals(); }
+refreshAll(); refreshHealth(); refreshIntegrations();
+setInterval(refreshAll, 3500);
+setInterval(refreshHealth, 30000);
+document.getElementById('task').addEventListener('keydown', e => {
+  if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') runTask();
+});
+</script>
+</body>
+</html>

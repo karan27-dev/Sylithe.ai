@@ -198,6 +198,33 @@ def build_registry(settings: Settings, memory: MemoryStore) -> SkillRegistry:
         })
 
     @registry.register(
+        name="propose_change",
+        description="Propose a code change for operator approval (y/n). Does NOT modify the file. Provide the FULL new file content. The operator reviews the diff in the dashboard or terminal and applies or rejects it.",
+        parameters={
+            "type": "object",
+            "properties": {
+                "path": {"type": "string", "description": "File path relative to workspace"},
+                "description": {"type": "string", "description": "What the change does and why"},
+                "new_content": {"type": "string", "description": "Complete new file content"},
+            },
+            "required": ["path", "description", "new_content"],
+        },
+    )
+    def propose_change(path: str, description: str, new_content: str,
+                       _context: dict | None = None) -> str:
+        target = _safe_path(workspace, path)
+        original = target.read_text() if target.exists() else ""
+        proposal = memory.create_proposal(
+            file_path=path, description=description,
+            original_content=original, proposed_content=new_content,
+            run_id=(_context or {}).get("run_id", 0),
+        )
+        return json.dumps({
+            "proposal_id": proposal.id, "status": "pending",
+            "note": "Awaiting operator y/n. Do not write the file yourself.",
+        })
+
+    @registry.register(
         name="query_memory",
         description="Search Sylithe's pattern memory for similar past situations before acting.",
         parameters={

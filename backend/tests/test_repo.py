@@ -44,6 +44,14 @@ def test_dirty_state_detected(tmp_path):
     assert ctx.is_dirty
 
 
+def test_repo_name_with_dot_in_name():
+    from sylithe.devops.repo import RepoContext
+    ctx = RepoContext(is_git=True, remote_url="https://github.com/karan27-dev/Sylithe.ai")
+    assert ctx.repo_name == "karan27-dev/Sylithe.ai"
+    ctx2 = RepoContext(is_git=True, remote_url="git@github.com:acme/shop.git")
+    assert ctx2.repo_name == "acme/shop"
+
+
 def test_prompt_block_non_git(tmp_path):
     ctx = detect(tmp_path)
     block = ctx.as_prompt_block()
