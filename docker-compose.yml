@@ -1,0 +1,19 @@
+services:
+  sylithe:
+    build: ./backend
+    ports:
+      - "8000:8000"
+    env_file:
+      - .env
+    environment:
+      WORKSPACE_ROOT: /workspace
+      DATABASE_URL: sqlite:////data/sylithe.db
+      AUDIT_LOG_PATH: /data/audit.log.jsonl
+    volumes:
+      # Mount the repository you want the agent to operate on
+      - ${SYLITHE_WORKSPACE:-./}:/workspace
+      - sylithe-data:/data
+    restart: unless-stopped
+
+volumes:
+  sylithe-data:
